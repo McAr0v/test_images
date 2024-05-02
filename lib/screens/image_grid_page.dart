@@ -14,6 +14,7 @@ class ImageGridPage extends StatefulWidget {
 class ImageGridPageState extends State<ImageGridPage> {
 
   List<ImageFromPixabay> list = [];
+  int likesBarHeight = 35;
 
   bool loading = true;
 
@@ -122,62 +123,65 @@ class ImageGridPageState extends State<ImageGridPage> {
                   ),
                 ),
 
-                Row(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextFormField(
-                          decoration: InputDecoration(
-                            hintText: 'Поиск',
-                            prefixIcon: Icon(Icons.search),
-                            border: OutlineInputBorder(),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.5 > 500 ? MediaQuery.of(context).size.width * 0.5 : 500,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: TextFormField(
+                            decoration: InputDecoration(
+                              hintText: 'Поиск',
+                              prefixIcon: Icon(Icons.search),
+                              border: OutlineInputBorder(),
+                            ),
+                            controller: searchController,
                           ),
-                          controller: searchController,
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: TextButton(
-                        style: ButtonStyle(
-                          backgroundColor: MaterialStateProperty.all<Color>(Colors.blue),
-                          padding: MaterialStateProperty.all<EdgeInsetsGeometry>(EdgeInsets.all(15)),
-                        ),
-                        onPressed: (){
-                          EasyDebounce.debounce(
-                              'search-debouncer',                 // <-- An ID for this particular debouncer
-                              Duration(milliseconds: 500),    // <-- The debounce duration
-                                  () => searchImages(searchController.text)           // <-- The target method
-                          );
-                        },
-                        child: Text(
-                          'Найти',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.normal),
-                        ),
-                      ),
-                    ),
-                    if (searchController.text.isNotEmpty) Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: TextButton(
-                        style: ButtonStyle(
-                          backgroundColor: MaterialStateProperty.all<Color>(Colors.blue),
-                          padding: MaterialStateProperty.all<EdgeInsetsGeometry>(EdgeInsets.all(15)),
-                        ),
-                        onPressed: (){
-                          EasyDebounce.debounce(
-                              'search-debouncer',                 // <-- An ID for this particular debouncer
-                              Duration(milliseconds: 500),    // <-- The debounce duration
-                                  () => cleanField()        // <-- The target method
-                          );
-                        },
-                        child: Text(
-                          'Очистить',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.normal),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: TextButton(
+                          style: ButtonStyle(
+                            backgroundColor: MaterialStateProperty.all<Color>(Colors.blue),
+                            padding: MaterialStateProperty.all<EdgeInsetsGeometry>(EdgeInsets.all(15)),
+                          ),
+                          onPressed: (){
+                            EasyDebounce.debounce(
+                                'search-debouncer',                 // <-- An ID for this particular debouncer
+                                Duration(milliseconds: 500),    // <-- The debounce duration
+                                    () => searchImages(searchController.text)           // <-- The target method
+                            );
+                          },
+                          child: Text(
+                            'Найти',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.normal),
+                          ),
                         ),
                       ),
-                    )
-                  ],
+                      if (searchController.text.isNotEmpty) Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: TextButton(
+                          style: ButtonStyle(
+                            backgroundColor: MaterialStateProperty.all<Color>(Colors.blue),
+                            padding: MaterialStateProperty.all<EdgeInsetsGeometry>(EdgeInsets.all(15)),
+                          ),
+                          onPressed: (){
+                            EasyDebounce.debounce(
+                                'search-debouncer',                 // <-- An ID for this particular debouncer
+                                Duration(milliseconds: 500),    // <-- The debounce duration
+                                    () => cleanField()        // <-- The target method
+                            );
+                          },
+                          child: Text(
+                            'Очистить',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.normal),
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
                 ),
 
                 if (loading) Expanded(
@@ -223,13 +227,48 @@ class ImageGridPageState extends State<ImageGridPage> {
                                 ),
                               );
                             },
-                            child: Hero(
-                              tag: 'imageHero$index', // Уникальный тег для каждого изображения
-                              child: Image.network(
-                                list[index].imageURL,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
+                            child: Stack(
+                              children: [
+                                Container(
+                                  width: double.infinity, // Ширина равна максимальной ширине
+                                  height: (screenWidth / columnCount), // Высота равна ширине для квадратной формы
+                                  child: Image.network(
+                                    list[index].imageURL,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 0, // Выравнивание по нижнему краю
+                                  left: 0, // Выравнивание по левому краю
+                                  right: 0, // Выравнивание по правому краю
+                                  child: Container(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Icon(Icons.favorite, color: Colors.grey, size: 18,),
+                                              SizedBox(width: 10,),
+                                              Text(list[index].likes.toString(), style: TextStyle(color: Colors.grey, fontSize: 12),)
+                                            ],
+                                          ),
+                                          Row(
+                                            children: [
+                                              Icon(Icons.person_off, color: Colors.grey, size: 18,),
+                                              SizedBox(width: 10,),
+                                              Text(list[index].views.toString(), style: TextStyle(color: Colors.grey, fontSize: 12),)
+                                            ],
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                    color: Colors.black.withOpacity(0.7),
+                                  ),
+                                ),
+                              ],
+                            )
                           );
                         },
                       );
