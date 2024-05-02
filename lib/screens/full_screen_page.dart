@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 
 class FullScreenImagePage extends StatelessWidget {
   final String imageUrl;
+  final String imageId;
 
-  const FullScreenImagePage({super.key, required this.imageUrl});
+  const FullScreenImagePage({super.key, required this.imageUrl, required this.imageId});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
-      body: Center(
-        child: Hero(
-          tag: 'imageHero', // Тот же тег, что и у маленького изображения
-          child: FadeTransition(
-            opacity: AlwaysStoppedAnimation(1),
-            child: Image.network(imageUrl),
-          ),
+      appBar: AppBar(
+        title: Text('Фото $imageId'),
+      ),
+      body: Container(
+        color: Colors.black,
+        child: Center(
+          child: Image.network(imageUrl),
         ),
       ),
     );

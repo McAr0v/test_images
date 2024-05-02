@@ -1,11 +1,15 @@
 import 'package:easy_debounce/easy_debounce.dart';
 import 'package:flutter/material.dart';
+import 'package:test_images/design/logo_header.dart';
 import 'package:test_images/pixabay/pixabay_class.dart';
-
+import '../design/empty_result_widget.dart';
+import '../design/image_widget.dart';
+import '../design/loading_images_widget.dart';
+import '../design/search_bar.dart';
 import '../image_class/image_from_pixabay.dart';
-import 'full_screen_page.dart';
 
 class ImageGridPage extends StatefulWidget {
+  const ImageGridPage({super.key});
 
   @override
   ImageGridPageState createState() => ImageGridPageState();
@@ -14,305 +18,237 @@ class ImageGridPage extends StatefulWidget {
 class ImageGridPageState extends State<ImageGridPage> {
 
   List<ImageFromPixabay> list = [];
-  int likesBarHeight = 35;
 
   bool loading = true;
+  bool lazyLoad = false;
 
-  bool notMoreImage = false;
-  
   String query = '';
-  
   int page = 1;
+
   TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
-
-    initializeScreen();
     super.initState();
-  }
 
-  Future<void> initializeScreen() async {
-
-    setState(() {
-      loading = true;
-    });
-
-    list = await PixabayClass.fetchData(query, page: page);
-
-    setState(() {
-      loading = false;
-    });
-
-
-  }
-
-  Future<void> addImagesInList() async {
-    page++;
-    List<ImageFromPixabay> templist = await PixabayClass.fetchData(query, page: page);
-    setState(() {
-      if (templist.isNotEmpty){
-        list.addAll(templist);
-      } else {
-        notMoreImage = true;
-      }
-    });
-
-  }
-
-  Future<void> searchImages(String inputQuery) async {
-    setState(() {
-      loading = true;
-      notMoreImage = false;
-    });
-    list.clear();
-    page = 1;
-    query = inputQuery;
-
-    List<ImageFromPixabay> templist = await PixabayClass.fetchData(query, page: page);
-    setState(() {
-      if (templist.isNotEmpty){
-        list.addAll(templist);
-      } else {
-        notMoreImage = true;
-      }
-
-      loading = false;
-
-    });
-
+    // Загружаем картинки по умолчанию
+    getImages('', true);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      /*appBar: AppBar(
-        title: Text('Image Grid'),
-      ),*/
-      body: NotificationListener<ScrollNotification>(
-        onNotification: (ScrollNotification scrollInfo)
-        {
-          if (scrollInfo.metrics.maxScrollExtent == scrollInfo.metrics.pixels){
+        body: NotificationListener<ScrollNotification>(
+          onNotification: (ScrollNotification scrollInfo)
+          {
+            // Если долистали до конца страницы
+            if (scrollInfo.metrics.maxScrollExtent == scrollInfo.metrics.pixels){
 
-            EasyDebounce.debounce(
-                'scroll-debouncer',                 // <-- An ID for this particular debouncer
-                Duration(milliseconds: 500),    // <-- The debounce duration
-                    () => addImagesInList()           // <-- The target method
-            );
-          }
-          return false;
-        },
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(15.0),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Картинки с PixaBay',
-                        style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        'Окунись в мир изображений',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.normal),
-                      ),
-                    ],
-                  ),
-                ),
+              // Включаем оповещение о подгрузке изображений
+              setState(() {
+                lazyLoad = true;
+              });
 
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.5 > 500 ? MediaQuery.of(context).size.width * 0.5 : 500,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: TextFormField(
-                            decoration: InputDecoration(
-                              hintText: 'Поиск',
-                              prefixIcon: Icon(Icons.search),
-                              border: OutlineInputBorder(),
-                            ),
-                            controller: searchController,
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextButton(
-                          style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all<Color>(Colors.blue),
-                            padding: MaterialStateProperty.all<EdgeInsetsGeometry>(EdgeInsets.all(15)),
-                          ),
-                          onPressed: (){
-                            EasyDebounce.debounce(
-                                'search-debouncer',                 // <-- An ID for this particular debouncer
-                                Duration(milliseconds: 500),    // <-- The debounce duration
-                                    () => searchImages(searchController.text)           // <-- The target method
-                            );
-                          },
-                          child: Text(
-                            'Найти',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.normal),
-                          ),
-                        ),
-                      ),
-                      if (searchController.text.isNotEmpty) Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextButton(
-                          style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all<Color>(Colors.blue),
-                            padding: MaterialStateProperty.all<EdgeInsetsGeometry>(EdgeInsets.all(15)),
-                          ),
-                          onPressed: (){
-                            EasyDebounce.debounce(
-                                'search-debouncer',                 // <-- An ID for this particular debouncer
-                                Duration(milliseconds: 500),    // <-- The debounce duration
-                                    () => cleanField()        // <-- The target method
-                            );
-                          },
-                          child: Text(
-                            'Очистить',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.normal),
-                          ),
-                        ),
-                      )
-                    ],
-                  ),
-                ),
+              // Через дебоунсер вызываем метод загрузки следующей страницы с Pixabay
+              EasyDebounce.debounce(
+                  'scroll-debouncer',
+                  const Duration(milliseconds: 500),
+                      () => addImagesInList()
+              );
+            }
 
-                if (loading) Expanded(
-                  child: Center(
-                    child: CircularProgressIndicator(color: Colors.black,),
-                  ),
-                ),
-                if (list.isNotEmpty && !loading) Expanded(
-                  child: LayoutBuilder(
-                    builder: (BuildContext context, BoxConstraints constraints) {
-                      // Получаем ширину экрана
-                      double screenWidth = constraints.maxWidth;
+            return false;
+          },
+          child: Stack(
+            children: [
 
-                      // Вычисляем количество столбцов в сетке в зависимости от ширины экрана
-                      int columnCount = getColumnCounters(screenWidth); // Предположим, что каждое изображение имеет ширину 150
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
 
+                  // Логотип
+                  const LogoHeader(),
 
-                      return GridView.builder(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: columnCount,
-                          crossAxisSpacing: 4,
-                          mainAxisSpacing: 4,
-                        ),
-                        itemCount: list.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                PageRouteBuilder(
-                                  pageBuilder: (context, animation, secondaryAnimation) {
-                                    return FullScreenImagePage(imageUrl: list[index].largeImageURL);
-                                  },
-                                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                    return SlideTransition(
-                                      position: Tween<Offset>(
-                                        begin: Offset(-1.0, 0.0), // Начальная позиция за пределами экрана слева
-                                        end: Offset.zero, // Конечная позиция (центр экрана)
-                                      ).animate(animation),
-                                      child: child,
-                                    );
-                                  },
-                                ),
-                              );
-                            },
-                            child: Stack(
-                              children: [
-                                Container(
-                                  width: double.infinity, // Ширина равна максимальной ширине
-                                  height: (screenWidth / columnCount), // Высота равна ширине для квадратной формы
-                                  child: Image.network(
-                                    list[index].imageURL,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                Positioned(
-                                  bottom: 0, // Выравнивание по нижнему краю
-                                  left: 0, // Выравнивание по левому краю
-                                  right: 0, // Выравнивание по правому краю
-                                  child: Container(
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Icon(Icons.favorite, color: Colors.grey, size: 18,),
-                                              SizedBox(width: 10,),
-                                              Text(list[index].likes.toString(), style: TextStyle(color: Colors.grey, fontSize: 12),)
-                                            ],
-                                          ),
-                                          Row(
-                                            children: [
-                                              Icon(Icons.person_off, color: Colors.grey, size: 18,),
-                                              SizedBox(width: 10,),
-                                              Text(list[index].views.toString(), style: TextStyle(color: Colors.grey, fontSize: 12),)
-                                            ],
-                                          )
-                                        ],
-                                      ),
-                                    ),
-                                    color: Colors.black.withOpacity(0.7),
-                                  ),
-                                ),
-                              ],
-                            )
+                  // Поисковая панель
+                  SearchingBar(
+                      searchController: searchController,
+                      onClear: (){
+                        getImages('', true);
+                      },
+                      onButtonClick: (){
+                        // Если текст введен в форму поиска
+                        if (searchController.text.isNotEmpty){
+                          setState(() {
+                            loading = true;
+                          });
+                          // С помощью дебоунс вызываем наш метод поиска
+                          EasyDebounce.debounce(
+                              'search-debouncer',
+                              const Duration(milliseconds: 500),
+                                  () => getImages(searchController.text, false)
                           );
-                        },
-                      );
-                    },
+                        } else {
+                          // Если текст не ввели в форму, показываем ошибку
+                          showSnackBar(
+                              barColor: Colors.redAccent,
+                              textColor: Colors.white,
+                              text: 'Ошибка! Введите поисковый запрос'
+                          );
+                        }
+                      }
                   ),
-                ),
 
-                if (notMoreImage) // Проверяем условие notMoreImage
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      "Изображений больше нет",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 10,),
+
+                  // Индикатор загрузки при ожидании подгрузки списка
+                  if (loading) const Expanded(
+                    child: Center(
+                      child: CircularProgressIndicator(color: Colors.orange,),
                     ),
                   ),
-              ],
-            ),
-          ],
-        ),
-      )
+
+                  // Если список пустой - виджет-оповещение
+                  if (!loading && list.isEmpty) EmptyResultWidget(
+                    onTap: (){
+                      getImages('', true);
+                    }
+                  ),
+
+                  // Если список не пустой - сетка картинок
+                  if (list.isNotEmpty && !loading) Expanded(
+                    child: LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints constraints) {
+
+                        // Получаем ширину экрана
+                        double screenWidth = constraints.maxWidth;
+
+                        // Вычисляем количество столбцов в сетке в зависимости от ширины экрана
+                        int columnCount = getColumnCounters(screenWidth);
+
+                        return GridView.builder(
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: columnCount,
+                            crossAxisSpacing: 4,
+                            mainAxisSpacing: 4,
+                          ),
+                          itemCount: list.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            return ImageWidget(
+                              image: list[index],
+                              height: screenWidth / columnCount,
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+
+              // Виджет-оповещение при подгрузке изображений при скролле
+              if (lazyLoad) const LoadingImagesWidget(),
+            ],
+          ),
+        )
     );
   }
 
-  Future<void> cleanField() async {
-    searchController.text = '';
-    query = '';
-    page = 1;
-    list.clear();
-    List<ImageFromPixabay> tempList = await PixabayClass.fetchData(query, page: page);
+  // Метод получения списка картинок по запросу
+  Future<void> getImages(String inputQuery, bool needClear) async {
+
+    // Включаем экран загрузки
     setState(() {
-      list = tempList;
+      loading = true;
+    });
+
+    // Если нужно, сбрасывыаем текст в форме ввода
+    if (needClear) searchController.text = '';
+
+    // Сбрасываем счетчик страниц
+    page = 1;
+    // Сбрасываем ключевые слова для поиска
+    query = inputQuery;
+
+    // Очищаем основной список
+    list.clear();
+
+    // Подгружаем новый согласно ключевым словам
+    List<ImageFromPixabay> tempList = await PixabayClass.fetchData(query, page: page);
+
+    setState(() {
+      if (tempList.isNotEmpty){
+        list.addAll(tempList);
+      }
+      loading = false;
     });
 
   }
 
+  Future<void> addImagesInList() async {
+
+    // Инкрементируем счетчик страниц
+    page++;
+
+    // Получаем список картинок с нужной страницы
+    List<ImageFromPixabay> tempList = await PixabayClass.fetchData(query, page: page);
+
+    setState(() {
+
+      // Убираем оповещение ленивой загрузки
+      lazyLoad = false;
+
+      if (tempList.isNotEmpty){
+        // Если список не пустой, добавляем к основному списку подгруженную страницу
+        list.addAll(tempList);
+      } else {
+        // Если ничего не загрузилось, значит страниц больше нет
+        // Показываем оповещение
+        showSnackBar(
+            barColor: Colors.yellow,
+            textColor: Colors.black,
+            text: 'Изображений больше нет'
+        );
+      }
+    });
+  }
+
+  void showSnackBar(
+      {
+        Color barColor = Colors.black,
+        Color textColor = Colors.white,
+        required String text,
+        int time = 2,
+      }
+      ){
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Center(
+              child: Text(
+                text,
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.normal,
+                    color: textColor
+                ),
+              )
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          backgroundColor: barColor,
+          duration: Duration(seconds: time),
+        )
+    );
+  }
+
   int getColumnCounters(double screenWidth){
     // Вычисляем количество столбцов в сетке в зависимости от ширины экрана
-    int columnCount = (screenWidth / 250).round(); // Предположим, что каждое изображение имеет ширину 150
+    int columnCount = (screenWidth / 250).round(); // Предположим, что каждое изображение имеет ширину 250
 
     switch (columnCount){
       case 1: return 1;
       case 2: return 2;
-      case 3: return 4;
+      case 3: return 2;
       case 4: return 4;
+      case 5: return 4;
       default: return 6;
     }
   }

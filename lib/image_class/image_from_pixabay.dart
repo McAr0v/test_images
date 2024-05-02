@@ -5,20 +5,16 @@ class ImageFromPixabay {
   final int views;
   final int likes;
 
-  // Другие свойства...
-
-  // Конструктор
   ImageFromPixabay({
     required this.id,
     required this.imageURL,
     required this.likes,
     required this.views,
     required this.largeImageURL,
-
-    // Другие свойства...
   });
 
-  // Фабричный метод для создания объекта ImageData из JSON
+  // Метод для создания объекта из JSON
+
   factory ImageFromPixabay.fromJson(Map<String, dynamic> json) {
     return ImageFromPixabay(
       id: json['id'] as int,
@@ -26,7 +22,6 @@ class ImageFromPixabay {
       largeImageURL: json['largeImageURL'],
       likes: json['likes'] as int,
       views: json['views'] as int,
-      // Другие свойства...
     );
   }
 }
